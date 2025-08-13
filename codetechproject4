@@ -1,0 +1,30 @@
+# Install PuLP if needed
+!pip install pulp
+
+import pulp
+
+# Create the problem
+model = pulp.LpProblem("Product_Mix_Optimization", pulp.LpMaximize)
+
+# Decision variables: Number of units of Product A and B
+A = pulp.LpVariable('Product_A', lowBound=0, cat='Continuous')
+B = pulp.LpVariable('Product_B', lowBound=0, cat='Continuous')
+
+# Objective function: Maximize profit
+model += 50 * A + 40 * B, "Total_Profit"
+
+# Constraints:
+# Machine 1: 2 hours for A, 1 hour for B (Max 40 hours)
+model += 2 * A + 1 * B <= 40, "Machine_1_Capacity"
+
+# Machine 2: 1 hour for A, 2 hours for B (Max 50 hours)
+model += 1 * A + 2 * B <= 50, "Machine_2_Capacity"
+
+# Solve the problem
+model.solve()
+
+# Results
+print("Status:", pulp.LpStatus[model.status])
+print(f"Optimal units of Product A: {A.varValue}")
+print(f"Optimal units of Product B: {B.varValue}")
+print(f"Maximum Profit: ₹{pulp.value(model.objective)}")
