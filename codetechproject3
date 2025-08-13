@@ -1,0 +1,60 @@
+# train.py
+import json
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+MODEL_PATH = "model.joblib"
+META_PATH = "model_meta.json"
+
+def main():
+    # ===== 1) DATA COLLECTION =====
+    iris = load_iris(as_frame=True)
+    df = iris.frame.copy()  # X + y
+    df.rename(columns={"target": "label"}, inplace=True)
+
+    # ===== 2) TRAIN/TEST SPLIT =====
+    X = df.drop(columns=["label"])
+    y = df["label"]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    # ===== 3) PREPROCESS + MODEL (Pipeline) =====
+    pipe = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(max_iter=200))
+    ])
+
+    # ===== 4) TRAIN =====
+    pipe.fit(X_train, y_train)
+
+    # ===== 5) EVAL =====
+    y_pred = pipe.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    report = classification_report(y_test, y_pred, output_dict=True)
+    cm = confusion_matrix(y_test, y_pred).tolist()
+
+    # ===== 6) SAVE =====
+    joblib.dump(pipe, MODEL_PATH)
+    meta = {
+        "features": list(X.columns),
+        "target_names": iris.target_names.tolist(),
+        "accuracy": acc,
+        "classification_report": report,
+        "confusion_matrix": cm
+    }
+    with open(META_PATH, "w") as f:
+        json.dump(meta, f, indent=2)
+
+    print(f"Saved {MODEL_PATH} with accuracy={acc:.3f}")
+    print(f"Saved metadata to {META_PATH}")
+
+if _name_ == "_main_":
+    main()
