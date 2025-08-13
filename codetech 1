@@ -1,0 +1,54 @@
+# etl_pipeline.py
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+
+# ======== EXTRACT ========
+# Load data from CSV (replace 'data.csv' with your file path)
+df = pd.read_csv("data.csv")
+print("Initial Data:")
+print(df.head())
+
+# ======== TRANSFORM ========
+# Separate features into numerical and categorical
+numerical_features = df.select_dtypes(include=['int64', 'float64']).columns
+categorical_features = df.select_dtypes(include=['object']).columns
+
+# Numerical transformation: fill missing values, scale
+numerical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="mean")),
+    ("scaler", StandardScaler())
+])
+
+# Categorical transformation: fill missing, one-hot encode
+categorical_transformer = Pipeline(steps=[
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(handle_unknown="ignore"))
+])
+
+# Combine transformers
+preprocessor = ColumnTransformer(
+    transformers=[
+        ("num", numerical_transformer, numerical_features),
+        ("cat", categorical_transformer, categorical_features)
+    ]
+)
+
+# Create preprocessing pipeline
+pipeline = Pipeline(steps=[("preprocessor", preprocessor)])
+
+# Apply transformation
+processed_data = pipeline.fit_transform(df)
+
+# ======== LOAD ========
+# Convert to DataFrame with encoded columns
+processed_df = pd.DataFrame(
+    processed_data.toarray() if hasattr(processed_data, "toarray") else processed_data
+)
+
+# Save to CSV
+processed_df.to_csv("processed_data.csv", index=False)
+print("ETL process complete! Processed data saved to 'processed_data.csv'.")
